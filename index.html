@@ -1,0 +1,991 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Bharat Royale: India Legends — 3D Tactical Action</title>
+  <!-- Three.js CDN for crisp 3D graphics, lighting, shadows & VFX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Fonts for clean tactical UI -->
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --saffron: #ff7722;
+      --gold: #fbbf24;
+      --emerald: #10b981;
+      --bg-dark: #090d16;
+      --panel: rgba(13, 19, 32, 0.88);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      color: var(--text);
+      touch-action: none;
+    }
+
+    h1, h2, h3, .tactical-font {
+      font-family: 'Rajdhani', sans-serif;
+      letter-spacing: 0.04em;
+    }
+
+    /* Fullscreen 3D Canvas */
+    #gameCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+    }
+
+    /* Glassmorphic Overlays */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+      background: radial-gradient(circle at 50% 40%, rgba(15, 23, 42, 0.35), rgba(6, 10, 18, 0.92));
+      overflow-y: auto;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Lobby Header */
+    .lobby-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .emblem {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ff7722, #ffffff 50%, #138808);
+      display: grid;
+      place-items: center;
+      color: #090d16;
+      font-weight: 900;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 15px rgba(255, 119, 34, 0.4);
+    }
+
+    .brand h1 {
+      font-size: 1.45rem;
+      line-height: 1.1;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #fff, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand p {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .admin-founder-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      background: linear-gradient(90deg, rgba(251, 191, 36, 0.22), rgba(16, 185, 129, 0.22));
+      border: 1px solid rgba(251, 191, 36, 0.55);
+      color: #fde68a;
+    }
+
+    .callsign-input {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      color: #fde68a;
+      font-weight: 700;
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      width: 165px;
+      outline: none;
+    }
+
+    .hud-watermark {
+      position: absolute;
+      bottom: 8px;
+      left: 14px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: rgba(248, 250, 252, 0.52);
+      background: rgba(9, 13, 22, 0.55);
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost.active {
+      background: rgba(255, 119, 34, 0.22);
+      border-color: var(--saffron);
+      color: #ffedd5;
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, #ff7722, #f59e0b);
+      color: #0b0f19;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      padding: 13px 34px;
+      border-radius: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      box-shadow: 0 8px 25px rgba(255, 119, 34, 0.45);
+    }
+
+    /* Lobby Main Layout */
+    .lobby-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr 330px;
+      gap: 14px;
+      align-items: end;
+      margin: auto 0;
+      padding: 10px 0;
+    }
+
+    @media (max-width: 1024px) {
+      .lobby-grid {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Map Selector Cards */
+    .map-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .map-item {
+      padding: 10px 12px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .map-item.selected {
+      background: linear-gradient(90deg, rgba(255, 119, 34, 0.24), rgba(16, 185, 129, 0.14));
+      border-color: var(--saffron);
+      box-shadow: 0 0 0 1px var(--saffron);
+    }
+
+    .map-item h4 {
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .map-item span {
+      font-size: 0.74rem;
+      color: var(--muted);
+      display: block;
+    }
+
+    .map-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Center Showcase Info */
+    .center-stage {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      min-height: 180px;
+      pointer-events: none;
+    }
+
+    .squad-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      pointer-events: auto;
+    }
+
+    .squad-tag {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border);
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Locker Controls */
+    .locker-group {
+      margin-bottom: 10px;
+    }
+
+    .locker-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      display: block;
+      font-weight: 600;
+    }
+
+    .option-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .opt-btn {
+      padding: 7px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .opt-btn.selected {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--emerald);
+      color: #ecfdf5;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+
+    /* Lobby Footer */
+    .lobby-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 16px;
+    }
+
+    .mode-switch {
+      display: flex;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .mode-btn.active {
+      background: var(--emerald);
+      color: #042117;
+    }
+
+    /* IN-GAME HUD */
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .hud-top-left {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .squad-hud {
+      background: rgba(9, 13, 22, 0.78);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 10px;
+      width: 210px;
+    }
+
+    .member-row {
+      margin-bottom: 6px;
+    }
+    .member-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .member-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .hp-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .hp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      transition: width 0.15s ease;
+    }
+
+    /* Top Center Match Stats */
+    .hud-top-center {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .stat-pill {
+      background: rgba(9, 13, 22, 0.82);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Top Right Minimap */
+    .hud-top-right {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    #minimap {
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      background: rgba(9, 13, 22, 0.88);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Kill Feed */
+    .kill-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+      max-width: 240px;
+    }
+
+    .kill-msg {
+      background: rgba(9, 13, 22, 0.78);
+      border-left: 3px solid var(--saffron);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      color: #f1f5f9;
+      animation: fadeSlide 0.2s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateX(10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Bottom Weapon & Vitals Bar */
+    .hud-bottom-center {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .vitals-box {
+      display: flex;
+      gap: 10px;
+      background: rgba(9, 13, 22, 0.85);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 12px;
+      min-width: 260px;
+    }
+
+    .bar-wrap {
+      flex: 1;
+    }
+
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .weapon-dock {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .wep-slot {
+      background: rgba(15, 23, 42, 0.86);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      min-width: 78px;
+      text-align: center;
+      transition: all 0.12s ease;
+    }
+
+    .wep-slot.active {
+      border-color: var(--gold);
+      background: rgba(251, 191, 36, 0.2);
+      transform: translateY(-3px);
+    }
+
+    .wep-name {
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: block;
+    }
+
+    .wep-ammo {
+      font-size: 0.66rem;
+      color: var(--muted);
+    }
+
+    /* Interactive Action Prompt (Vehicle / Loot) */
+    #actionPrompt {
+      position: absolute;
+      bottom: 135px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ff7722, #f59e0b);
+      color: #090d16;
+      font-weight: 800;
+      font-size: 0.82rem;
+      padding: 8px 16px;
+      border-radius: 999px;
+      box-shadow: 0 6px 18px rgba(255, 119, 34, 0.45);
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    /* Touch / Mobile Controls */
+    .touch-zone-left {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      width: 118px;
+      height: 118px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      pointer-events: auto;
+      display: none;
+    }
+
+    .joystick-knob {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255, 119, 34, 0.85);
+      border: 2px solid #fff;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .touch-zone-right {
+      position: absolute;
+      bottom: 24px;
+      right: 20px;
+      display: none;
+      gap: 10px;
+      align-items: flex-end;
+      pointer-events: auto;
+    }
+
+    .t-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      background: rgba(15, 23, 42, 0.82);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.72rem;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .t-btn-fire {
+      width: 72px;
+      height: 72px;
+      background: radial-gradient(circle, #ff7722, #dc2626);
+      border-color: #fde68a;
+      font-size: 0.85rem;
+    }
+
+    @media (hover: none) and (pointer: coarse), (max-width: 900px) {
+      .touch-zone-left { display: block; }
+      .touch-zone-right { display: flex; }
+      .hud-bottom-center { bottom: 155px; }
+      #actionPrompt { bottom: 265px; }
+    }
+
+    /* End Match Modal */
+    .end-card {
+      max-width: 440px;
+      width: 100%;
+      margin: auto;
+      text-align: center;
+      background: var(--panel);
+      border: 2px solid var(--gold);
+      border-radius: 20px;
+      padding: 26px 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+    }
+
+    .end-title {
+      font-size: 2.3rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #ff7722, #fde047, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .sum-box {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 10px 6px;
+    }
+
+    .sum-box strong {
+      display: block;
+      font-size: 1.25rem;
+      color: var(--gold);
+    }
+
+    .sum-box span {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Render Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- MAIN LOBBY & LOCKER OVERLAY -->
+  <div id="lobbyOverlay" class="overlay">
+    <!-- Top Header -->
+    <div class="lobby-top">
+      <div class="brand">
+        <div class="emblem">BR</div>
+        <div>
+          <h1>Bharat Royale: India Legends</h1>
+          <p>3D Tactical Battle Royale • Squad &amp; Solo Action</p>
+          <div class="admin-founder-badge">👑 Admin: Naushad • Game Creator &amp; Founder</div>
+        </div>
+      </div>
+      <div class="top-actions" style="flex-wrap:wrap;">
+        <label style="font-size:0.74rem;color:var(--muted);display:flex;align-items:center;gap:6px;">
+          <span>Callsign:</span>
+          <input type="text" id="playerCallsignInput" class="callsign-input" value="Admin: Naushad" maxlength="24" />
+        </label>
+        <button class="btn btn-ghost" id="soundToggleBtn">🔊 SFX: ON</button>
+        <button class="btn btn-ghost" id="controlsHelpBtn">🎮 Controls</button>
+      </div>
+    </div>
+
+    <!-- Main 3-Column Lobby -->
+    <div class="lobby-grid">
+      <!-- Left: Iconic Indian Maps Selector -->
+      <div class="card">
+        <div class="card-title">
+          <span>🗺️ Select Indian Arena</span>
+          <span style="font-size:0.72rem;color:var(--emerald);">HD 3D</span>
+        </div>
+        <div class="map-list" id="mapList"></div>
+      </div>
+
+      <!-- Center: Live 3D Character Preview & Squad Status -->
+      <div class="center-stage">
+        <div class="squad-pills" id="lobbySquadPills"></div>
+        <div style="background:rgba(9,13,22,0.75);padding:6px 14px;border-radius:999px;border:1px solid var(--border);font-size:0.75rem;color:#e2e8f0;">
+          Drag on character to rotate 360° • Preview Outfit, Shoes &amp; Gun Skin
+        </div>
+      </div>
+
+      <!-- Right: Wardrobe / Locker (Kapde, Shoes, Headgear, Gun Skin) -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎒 Legend Locker (Wardrobe)</span>
+          <span style="font-size:0.68rem;color:var(--gold);">ADMIN: NAUSHAD EDITION</span>
+        </div>
+
+        <div class="locker-group">
+          <span class="locker-label">👕 Outfit / Kapde</span>
+          <div class="option-row" id="outfitOptions"></div>
+        </div>
+
+        <div class="locker-group">
+          <span class="locker-label">👟 Footwear / Shoes</span>
+          <div class="option-row" id="shoeOptions"></div>
+        </div>
+
+        <div class="locker-group">
+          <span class="locker-label">🕶️ Headgear &amp; Shades</span>
+          <div class="option-row" id="headOptions"></div>
+        </div>
+
+        <div class="locker-group" style="margin-bottom:0;">
+          <span class="locker-label">🔫 Primary Weapon Skin</span>
+          <div class="option-row" id="skinOptions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Mode & Start Bar -->
+    <div class="lobby-bottom">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="mode-switch">
+          <button class="mode-btn active" id="modeSquadBtn">👥 4-Player Squad</button>
+          <button class="mode-btn" id="modeSoloBtn">🧍 Solo (1 Player)</button>
+        </div>
+        <span id="modeDesc" style="font-size:0.8rem;color:var(--muted);">
+          3 AI Teammates (Veer, Aarav, Kabir) saath ladenge aur gaadi mein baithenge!
+        </span>
+      </div>
+      <button class="btn btn-play" id="startMatchBtn">▶ START BATTLE</button>
+    </div>
+  </div>
+
+  <!-- CONTROLS HELP MODAL -->
+  <div id="helpOverlay" class="overlay hidden" style="z-index:35;background:rgba(5,8,15,0.9);">
+    <div class="end-card" style="max-width:520px;text-align:left;">
+      <h2 style="color:var(--gold);font-size:1.5rem;margin-bottom:10px;">🎮 Controls &amp; Gameplay Guide</h2>
+      <ul style="font-size:0.84rem;color:#cbd5e1;line-height:1.7;padding-left:18px;margin-bottom:16px;">
+        <li><strong>Move / Drive:</strong> <code>W A S D</code> ya <code>Arrow Keys</code> (Mobile par Left Joystick).</li>
+        <li><strong>Aim &amp; Shoot:</strong> Mouse se aim karein aur <code>Left Click</code> ya <code>Space</code> se fire karein.</li>
+        <li><strong>Switch Guns (1–5):</strong> <code>1</code> INSAS AR, <code>2</code> Sniper, <code>3</code> SMG, <code>4</code> Shotgun, <code>5</code> Grenade.</li>
+        <li><strong>Sprint / Boost:</strong> <code>Shift</code> dabakar tez daudein ya Bike/SUV ko Turbo Boost dein.</li>
+        <li><strong>Enter / Exit Bike &amp; SUV:</strong> Gaadi ke paas jaakar <code>F</code> dabayein (ya screen par button tap karein).</li>
+        <li><strong>Reload &amp; Heal:</strong> <code>R</code> se Reload karein, <code>H</code> se Medkit lagayein.</li>
+        <li><strong>Safe Zone:</strong> Saffron/Blue ring ke andar rahein warna zone damage hoga!</li>
+      </ul>
+      <button class="btn btn-play" style="width:100%;font-size:1.05rem;padding:10px;" id="closeHelpBtn">SAMJHA GAYA ✓</button>
+    </div>
+  </div>
+
+  <!-- IN-GAME HUD -->
+  <div id="hud" class="hidden">
+    <!-- Top Left: Squad Health Bars -->
+    <div class="hud-top-left">
+      <div class="squad-hud" id="squadHudList"></div>
+      <div style="display:flex;gap:6px;pointer-events:auto;">
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:0.74rem;" id="hudMuteBtn">🔊</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:0.74rem;" id="quitMatchBtn">✕ Lobby</button>
+      </div>
+    </div>
+
+    <!-- Top Center: Alive Count, Kills, Zone Timer -->
+    <div class="hud-top-center">
+      <div class="stat-pill"><span style="color:var(--emerald);">● ALIVE</span> <span id="aliveCount">16</span></div>
+      <div class="stat-pill"><span style="color:var(--saffron);">⚔ KILLS</span> <span id="killCount">0</span></div>
+      <div class="stat-pill"><span style="color:#38bdf8;">⭕ ZONE</span> <span id="zoneRadiusText">160m</span></div>
+    </div>
+
+    <!-- Top Right: Radar Minimap & Kill Feed -->
+    <div class="hud-top-right">
+      <canvas id="minimap" width="132" height="132"></canvas>
+      <div class="kill-feed" id="killFeed"></div>
+    </div>
+
+    <!-- Interactive Vehicle / Loot Button -->
+    <button id="actionPrompt" class="hidden">🏍️ Enter Vehicle [F]</button>
+
+    <!-- Bottom Center: HP, Shield & Weapons -->
+    <div class="hud-bottom-center">
+      <div class="vitals-box">
+        <div class="bar-wrap">
+          <div class="bar-label"><span>❤️ HP</span><span id="hpText">100/100</span></div>
+          <div class="hp-track"><div class="hp-fill" id="hpBar" style="width:100%;"></div></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-label"><span>🛡️ ARMOR</span><span id="armorText">50/100</span></div>
+          <div class="hp-track"><div class="hp-fill" id="armorBar" style="width:50%;background:linear-gradient(90deg,#0284c7,#38bdf8);"></div></div>
+        </div>
+        <button class="btn btn-ghost" style="padding:4px 8px;font-size:0.72rem;" id="healBtn">💊 Heal (<span id="medCount">2</span>)</button>
+      </div>
+
+      <div class="weapon-dock" id="weaponDock"></div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div class="touch-zone-left" id="joystickZone">
+      <div class="joystick-knob" id="joystickKnob"></div>
+    </div>
+    <div class="touch-zone-right">
+      <button class="t-btn" id="touchVehicleBtn">🏍️ F</button>
+      <button class="t-btn" id="touchReloadBtn">🔄 R</button>
+      <button class="t-btn" id="touchBoostBtn">⚡</button>
+      <button class="t-btn t-btn-fire" id="touchFireBtn">FIRE</button>
+    </div>
+
+    <!-- Subtle Founder Watermark -->
+    <div class="hud-watermark">👑 Created &amp; Managed by Admin: Naushad</div>
+  </div>
+
+  <!-- END MATCH SCREEN -->
+  <div id="endOverlay" class="overlay hidden" style="z-index:30;">
+    <div class="end-card">
+      <div id="endBadge" style="font-size:0.8rem;font-weight:800;color:var(--emerald);letter-spacing:0.12em;">MATCH COMPLETE</div>
+      <div class="end-title" id="endTitle">VIJAY BHAVA! #1</div>
+      <p id="endSubtitle" style="color:var(--muted);font-size:0.88rem;">Aapne aur aapki squad ne maidan jeet liya!</p>
+
+      <div class="stats-summary">
+        <div class="sum-box"><strong id="endKills">0</strong><span>Your Kills</span></div>
+        <div class="sum-box"><strong id="endSquadKills">0</strong><span>Squad Kills</span></div>
+        <div class="sum-box"><strong id="endMapName">Ranchi</strong><span>Arena</span></div>
+      </div>
+
+      <button class="btn btn-play" style="width:100%;" id="backToLobbyBtn">↻ RETURN TO LOBBY</button>
+      <div style="margin-top:12px;font-size:0.74rem;color:var(--gold);font-weight:700;">
+        Bharat Royale: India Legends • Founder &amp; Admin: Naushad
+      </div>
+    </div>
+  </div>
+
+  <script>
+// ... existing code ... -->
+    // ==========================================
+    // 3. STATE MANAGEMENT
+    // ==========================================
+    const state = {
+      screen: 'lobby', // 'lobby' | 'playing' | 'ended'
+      mode: 'squad', // 'squad' | 'solo'
+      playerName: 'Admin: Naushad',
+      selectedMap: MAPS[0],
+      outfit: OUTFITS[0],
+      shoes: SHOES[0],
+      headgear: HEADGEAR[0],
+      weaponSkin: WEAPON_SKINS[0],
+// ... existing code ... -->
+      // Spawn Player
+      spawnSoldier({
+        id: 'player',
+        name: state.playerName || 'Admin: Naushad',
+        team: 'alpha',
+        isPlayer: true,
+        x: 0,
+        z: 6,
+// ... existing code ... -->
+      // Squad Health Bars
+      const squadList = document.getElementById('squadHudList');
+      const alphaMembers = soldiers.filter((s) => s.team === 'alpha');
+      squadList.innerHTML = alphaMembers
+        .map(
+          (m) => `
+        <div class="member-row">
+          <div class="member-info">
+            <span style="color:${m.isPlayer ? '#fbbf24' : '#f8fafc'}">${m.isPlayer ? '👑 ' + m.name + ' (Leader)' : m.name}</span>
+            <span>${m.alive ? Math.ceil(m.hp) + ' HP' : 'DOWN'}</span>
+          </div>
+          <div class="hp-track">
+            <div class="hp-fill" style="width:${m.hp}%;background:${m.alive ? '#10b981' : '#ef4444'}"></div>
+          </div>
+        </div>
+      `
+        )
+        .join('');
+
+      // Minimap Radar
+// ... existing code ... -->
+      // Squad Pills
+      const pillsEl = document.getElementById('lobbySquadPills');
+      const pLabel = state.playerName || 'Admin: Naushad';
+      if (state.mode === 'squad') {
+        pillsEl.innerHTML = `
+          <span class="squad-tag" style="border-color:#fbbf24;"><span class="dot" style="background:#fbbf24"></span>👑 ${pLabel} (Leader)</span>
+          <span class="squad-tag"><span class="dot" style="background:#10b981"></span>Veer (Ranchi)</span>
+          <span class="squad-tag"><span class="dot" style="background:#10b981"></span>Aarav (Mumbai)</span>
+          <span class="squad-tag"><span class="dot" style="background:#10b981"></span>Kabir (Jaipur)</span>
+        `;
+      } else {
+        pillsEl.innerHTML = `<span class="squad-tag" style="border-color:#fbbf24;"><span class="dot" style="background:#fbbf24"></span>👑 ${pLabel} (Solo Legend)</span>`;
+      }
+
+      // Locker Helper
+// ... existing code ... -->
+    // Mode Toggle
+    document.getElementById('playerCallsignInput').addEventListener('input', (e) => {
+      state.playerName = e.target.value.trim() || 'Admin: Naushad';
+      renderLobbyUI();
+    });
+
+    document.getElementById('modeSquadBtn').onclick = () => {
+      state.mode = 'squad';
+// ... existing code ... -->
+```
